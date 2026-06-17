@@ -22,18 +22,33 @@ class ParseRequest(BaseModel):
     entry_date: Optional[date] = None
 
 
+SAP_PRODUCTS = """Bekannte SAP-Produktnamen und korrekte Schreibweisen (immer so normalisieren):
+- SAP Ariba (nicht: arriba, Arriba, ariba) – Beschaffungsplattform; Module: Ariba Invoicing, Ariba Sourcing, Ariba Contracts, Ariba Network
+- SAP S/4HANA (nicht: S4, S4Hana, s4hana)
+- SAP ECC / R/3
+- SAP Fiori
+- SAP BTP (Business Technology Platform)
+- SAP SuccessFactors
+- SAP Concur
+- SAP MDG (Master Data Governance)
+- SAP GRC
+- SAP PI/PO / SAP Integration Suite
+- SAP Analytics Cloud (SAC)
+- SAP Datasphere
+- SAP IBP (Integrated Business Planning)
+- SAP MM, SD, FI, CO, PP, WM, EWM, HCM (Modulkürzel großschreiben)
+"""
+
 def build_prompt(text: str, projects: list[dict], today: str, job_context: str) -> str:
     project_list = json.dumps(projects, ensure_ascii=False, indent=2)
+    sap_context = SAP_PRODUCTS if "sap" in job_context.lower() else ""
     return f"""Du bist ein intelligenter Zeiterfassungs-Assistent für eine Fachkraft im Bereich "{job_context}".
 
 Deine Aufgabe: Extrahiere strukturierte Arbeitszeitbuchungen aus dem folgenden Freitext (Deutsch).
 
-Kontext:
-- Benutzer-Rolle: {job_context}
-- Datum heute: {today}
-- Die Beschreibungen sollen kurz, professionell und kundentauglich formuliert sein (geeignet für Stundenzettel / Leistungsnachweise)
-- Typische Tätigkeiten im Bereich "{job_context}" beachten (z.B. bei SAP: Customizing, Workshops, Go-Live-Support, Konzeption, Testing, Schulung etc.)
-
+Benutzer-Rolle: {job_context}
+Datum heute: {today}
+{sap_context}
 Bekannte Projekte (id, name, shortcode, aliases):
 {project_list}
 
@@ -44,6 +59,7 @@ Regeln:
 4. Stundenangaben: "halbe Stunde" = 0.5, "anderthalb" = 1.5, "Viertel" = 0.25, "dreiviertel" = 0.75.
 5. Kein Datum im Text → heutiges Datum verwenden: {today}.
 6. Beschreibung: professionell, prägnant, auf Deutsch, kundentauglich (max. 60 Zeichen). Keine Umgangssprache.
+7. SAP-Produktnamen IMMER in korrekter Schreibweise verwenden (siehe Liste oben). Tippfehler im Input korrigieren.
 
 Antworte NUR mit gültigem JSON:
 {{
