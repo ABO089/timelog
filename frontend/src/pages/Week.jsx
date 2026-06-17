@@ -25,18 +25,25 @@ function CopyText({ text }) {
   )
 }
 
+function toLocalISO(d) {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
 function getMonday(d) {
   const date = new Date(d)
   const day = date.getDay()
   const diff = (day === 0 ? -6 : 1 - day)
   date.setDate(date.getDate() + diff)
-  return date.toISOString().split('T')[0]
+  return toLocalISO(date)
 }
 
 function addDays(iso, n) {
   const d = new Date(iso + 'T00:00:00')
   d.setDate(d.getDate() + n)
-  return d.toISOString().split('T')[0]
+  return toLocalISO(d)
 }
 
 function formatDay(iso) {
@@ -45,9 +52,12 @@ function formatDay(iso) {
 
 function formatKW(iso) {
   const d = new Date(iso + 'T00:00:00')
-  const jan4 = new Date(d.getFullYear(), 0, 4)
-  const kw = Math.ceil(((d - jan4) / 86400000 + jan4.getDay() + 1) / 7)
-  return `KW ${kw} / ${d.getFullYear()}`
+  // ISO 8601 week number: shift to nearest Thursday, then count from Jan 4
+  const thu = new Date(d)
+  thu.setDate(d.getDate() + 3 - (d.getDay() + 6) % 7)
+  const jan4 = new Date(thu.getFullYear(), 0, 4)
+  const kw = 1 + Math.round(((thu - jan4) / 86400000 - 3 + (jan4.getDay() + 6) % 7) / 7)
+  return `KW ${kw} / ${thu.getFullYear()}`
 }
 
 function hoursBadgeStyle(h) {
