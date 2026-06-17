@@ -54,12 +54,17 @@ Bekannte Projekte (id, name, shortcode, aliases):
 
 Regeln:
 1. Extrahiere ALLE erwähnten Projektzeitbuchungen.
-2. Ordne jede Erwähnung dem besten passenden Projekt zu (Fuzzy-Matching: Abkürzungen, Tippfehler, Aliase).
+2. Projekt-Matching — Priorität in dieser Reihenfolge:
+   a) Exakter Shortcode-Treffer (case-insensitiv) → confidence: 1.0, KEIN Fuzzy-Matching, KEINE Verwechslung ähnlicher Kürzel (ZIM ≠ CIM, RK ≠ FK, etc.)
+   b) Exakter Name-Treffer oder Alias-Treffer → confidence: 0.95
+   c) Fuzzy-Matching nur wenn kein exakter Treffer → confidence je nach Ähnlichkeit
 3. Konfidenz >= 0.8 → project_id setzen. Darunter → project_id: null + new_project_suggestions Eintrag.
 4. Stundenangaben: "halbe Stunde" = 0.5, "anderthalb" = 1.5, "Viertel" = 0.25, "dreiviertel" = 0.75.
 5. Kein Datum im Text → heutiges Datum verwenden: {today}.
 6. Beschreibung: professionell, prägnant, auf Deutsch, kundentauglich (max. 60 Zeichen). Keine Umgangssprache.
+   Kontext beachten: Tätigkeitsbeschreibungen sollen für einen {job_context} typisch und fachlich korrekt sein.
 7. SAP-Produktnamen IMMER in korrekter Schreibweise verwenden (siehe Liste oben). Tippfehler im Input korrigieren.
+8. NIEMALS Projektnamen erfinden die nicht in der Liste stehen. Nur bekannte Projekte verwenden oder new_project_suggestions.
 
 Antworte NUR mit gültigem JSON:
 {{
