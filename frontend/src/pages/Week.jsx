@@ -2,6 +2,29 @@ import { useState, useEffect, useCallback } from 'react'
 import { api } from '../api'
 import ProjectBadge from '../components/ProjectBadge'
 
+function CopyText({ text }) {
+  const [copied, setCopied] = useState(false)
+  if (!text) return null
+  function handleCopy() {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1500)
+    })
+  }
+  return (
+    <span
+      onClick={handleCopy}
+      title="Klicken zum Kopieren"
+      style={{ cursor: 'pointer', color: copied ? 'var(--green)' : 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 3 }}
+    >
+      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        {copied ? '✓ Kopiert!' : text}
+      </span>
+      {!copied && <span style={{ opacity: 0.35, fontSize: '0.65rem', flexShrink: 0 }}>⎘</span>}
+    </span>
+  )
+}
+
 function getMonday(d) {
   const date = new Date(d)
   const day = date.getDay()
@@ -146,7 +169,7 @@ export default function Week() {
               <div key={e.id} style={{ padding: '8px 12px', borderBottom: '1px solid var(--border)', display: 'flex', gap: 10, alignItems: 'center' }}>
                 <ProjectBadge color={e.project_color} name={e.project_name} shortcode={e.project_shortcode} />
                 <span style={{ fontSize: '0.88rem', fontWeight: 600, flexShrink: 0 }}>{e.duration_hours.toFixed(2)} h</span>
-                <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.description}</span>
+                <span style={{ fontSize: '0.82rem', flex: 1, overflow: 'hidden' }}><CopyText text={e.description} /></span>
               </div>
             ))}
           </div>

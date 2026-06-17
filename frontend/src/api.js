@@ -29,6 +29,7 @@ export const api = {
   login: (email, password) => req('POST', '/auth/login', { email, password }),
   register: (email, password) => req('POST', '/auth/register', { email, password }),
   me: () => req('GET', '/auth/me'),
+  updateProfile: (data) => req('PATCH', '/auth/profile', data),
   logout: () => { localStorage.removeItem('token'); localStorage.removeItem('email') },
 
   // Projects

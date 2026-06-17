@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { api } from '../api'
-import VoiceInput from '../components/VoiceInput'
+import TextInput from '../components/TextInput'
 import EntryTable from '../components/EntryTable'
 import NewProjectBanner from '../components/NewProjectBanner'
 import ProjectBadge from '../components/ProjectBadge'
@@ -118,8 +118,8 @@ export default function Today() {
         <span className={`hours-badge ${hoursBadgeClass(totalHours)}`}>{totalHours.toFixed(1)} h</span>
       </div>
 
-      {/* Voice input */}
-      <VoiceInput onResult={handleVoiceResult} loading={parseLoading} />
+      {/* Text input */}
+      <TextInput onResult={handleVoiceResult} loading={parseLoading} />
 
       {parseError && (
         <div style={{ margin: '0 16px 12px', background: '#fff0f0', border: '1px solid #f44', borderRadius: 8, padding: 10, fontSize: '0.85rem', color: '#c00' }}>
@@ -198,6 +198,37 @@ export default function Today() {
   )
 }
 
+function CopyText({ text }) {
+  const [copied, setCopied] = useState(false)
+  if (!text) return null
+  function handleCopy() {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1500)
+    })
+  }
+  return (
+    <div
+      onClick={handleCopy}
+      title="Klicken zum Kopieren"
+      style={{
+        fontSize: '0.82rem',
+        color: copied ? 'var(--green)' : 'var(--text-secondary)',
+        cursor: 'pointer',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 4,
+        overflow: 'hidden',
+      }}
+    >
+      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        {copied ? '✓ Kopiert!' : text}
+      </span>
+      {!copied && <span style={{ flexShrink: 0, opacity: 0.4, fontSize: '0.7rem' }}>⎘</span>}
+    </div>
+  )
+}
+
 function SavedEntryRow({ entry, projects, isEditing, onEdit, onSave, onCancel, onDelete }) {
   const [hours, setHours] = useState(entry.duration_hours)
   const [desc, setDesc] = useState(entry.description)
@@ -209,7 +240,7 @@ function SavedEntryRow({ entry, projects, isEditing, onEdit, onSave, onCancel, o
         <ProjectBadge color={entry.project_color} name={entry.project_name} shortcode={entry.project_shortcode} />
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{entry.duration_hours.toFixed(2)} h</div>
-          {entry.description && <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{entry.description}</div>}
+          <CopyText text={entry.description} />
         </div>
         <button onClick={onEdit} style={{ background: 'none', fontSize: '1rem', padding: 4, color: 'var(--brand)' }}>✏️</button>
         <button onClick={onDelete} style={{ background: 'none', fontSize: '1rem', padding: 4, color: '#aaa' }}>🗑</button>
