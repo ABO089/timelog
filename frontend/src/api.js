@@ -49,6 +49,8 @@ export const api = {
 
   // Parse
   parseVoice: (text, date) => req('POST', '/parse-voice', { text, entry_date: date }),
+  improveDescription: (description, project_name, hours) =>
+    req('POST', '/improve-description', { description, project_name, hours }),
 
   // Push notifications
   getVapidKey: () => req('GET', '/push/vapid-key'),

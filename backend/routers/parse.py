@@ -61,9 +61,9 @@ Regeln:
 3. Konfidenz >= 0.8 → project_id setzen. Darunter → project_id: null + new_project_suggestions Eintrag.
 4. Stundenangaben: "halbe Stunde" = 0.5, "anderthalb" = 1.5, "Viertel" = 0.25, "dreiviertel" = 0.75.
 5. Kein Datum im Text → heutiges Datum verwenden: {today}.
-6. Beschreibung: professionell, prägnant, auf Deutsch, kundentauglich (max. 60 Zeichen). Keine Umgangssprache.
-   Kontext beachten: Tätigkeitsbeschreibungen sollen für einen {job_context} typisch und fachlich korrekt sein.
-7. SAP-Produktnamen IMMER in korrekter Schreibweise verwenden (siehe Liste oben). Tippfehler im Input korrigieren.
+6. Beschreibung: Bleib nah am Original-Input. Korrigiere nur Schreibfehler und SAP-Produktnamen.
+   Kürze NICHT — der Nutzer möchte seine Formulierung behalten. Umgangssprache stehenlassen.
+7. SAP-Produktnamen IMMER in korrekter Schreibweise (siehe Liste oben). Sonst: Original übernehmen.
 8. NIEMALS Projektnamen erfinden die nicht in der Liste stehen. Nur bekannte Projekte verwenden oder new_project_suggestions.
 
 Antworte NUR mit gültigem JSON:

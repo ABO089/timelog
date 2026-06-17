@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { api } from '../api'
 
 export default function EntryTable({ entries, projects, onChange, onRemove }) {
   return (
@@ -14,7 +15,13 @@ export default function EntryTable({ entries, projects, onChange, onRemove }) {
         </thead>
         <tbody>
           {entries.map((entry, i) => (
-            <EntryRow key={i} entry={entry} projects={projects} onChange={(upd) => onChange(i, upd)} onRemove={() => onRemove(i)} />
+            <EntryRow
+              key={i}
+              entry={entry}
+              projects={projects}
+              onChange={(upd) => onChange(i, upd)}
+              onRemove={() => onRemove(i)}
+            />
           ))}
         </tbody>
         <tfoot>
@@ -30,44 +37,124 @@ export default function EntryTable({ entries, projects, onChange, onRemove }) {
 }
 
 function EntryRow({ entry, projects, onChange, onRemove }) {
+  const [improving, setImproving] = useState(false)
+  const [suggestion, setSuggestion] = useState(null)
+
+  async function handleImprove() {
+    setImproving(true)
+    setSuggestion(null)
+    try {
+      const project = projects.find(p => p.id === entry.project_id)
+      const res = await api.improveDescription(
+        entry.description || '',
+        project?.name || entry.project_name || '',
+        parseFloat(entry.hours) || 0,
+      )
+      setSuggestion(res.improved)
+    } catch {
+      setSuggestion(null)
+    } finally {
+      setImproving(false)
+    }
+  }
+
+  function acceptSuggestion() {
+    onChange({ ...entry, description: suggestion })
+    setSuggestion(null)
+  }
+
   return (
-    <tr>
-      <td style={td}>
-        <select
-          value={entry.project_id || ''}
-          onChange={(e) => onChange({ ...entry, project_id: parseInt(e.target.value) })}
-          style={{ fontSize: '0.85rem', padding: '4px 6px' }}
-        >
-          <option value="">— wählen —</option>
-          {projects.map((p) => (
-            <option key={p.id} value={p.id}>{p.shortcode} – {p.name}</option>
-          ))}
-        </select>
-      </td>
-      <td style={td}>
-        <input
-          type="number"
-          min="0.25"
-          max="24"
-          step="0.25"
-          value={entry.hours}
-          onChange={(e) => onChange({ ...entry, hours: e.target.value })}
-          style={{ fontSize: '0.85rem', padding: '4px 6px', width: 64 }}
-        />
-      </td>
-      <td style={td}>
-        <input
-          type="text"
-          value={entry.description || ''}
-          onChange={(e) => onChange({ ...entry, description: e.target.value })}
-          placeholder="Beschreibung…"
-          style={{ fontSize: '0.85rem', padding: '4px 6px' }}
-        />
-      </td>
-      <td style={{ ...td, textAlign: 'center' }}>
-        <button onClick={onRemove} style={{ background: 'none', color: '#aaa', fontSize: '1rem', padding: 4 }} aria-label="Entfernen">✕</button>
-      </td>
-    </tr>
+    <>
+      <tr>
+        <td style={td}>
+          <select
+            value={entry.project_id || ''}
+            onChange={(e) => onChange({ ...entry, project_id: parseInt(e.target.value) })}
+            style={{ fontSize: '0.85rem', padding: '4px 6px' }}
+          >
+            <option value="">— wählen —</option>
+            {projects.map((p) => (
+              <option key={p.id} value={p.id}>{p.shortcode} – {p.name}</option>
+            ))}
+          </select>
+        </td>
+        <td style={td}>
+          <input
+            type="number"
+            min="0.25"
+            max="24"
+            step="0.25"
+            value={entry.hours}
+            onChange={(e) => onChange({ ...entry, hours: e.target.value })}
+            style={{ fontSize: '0.85rem', padding: '4px 6px', width: 64 }}
+          />
+        </td>
+        <td style={td}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <input
+              type="text"
+              value={entry.description || ''}
+              onChange={(e) => onChange({ ...entry, description: e.target.value })}
+              placeholder="Beschreibung…"
+              style={{ fontSize: '0.85rem', padding: '4px 6px', flex: 1 }}
+            />
+            <button
+              onClick={handleImprove}
+              disabled={improving || !entry.description}
+              title="KI-Verbesserungsvorschlag für Faktura"
+              style={{
+                background: 'none',
+                border: '1px solid var(--border)',
+                borderRadius: 6,
+                padding: '3px 6px',
+                fontSize: '0.8rem',
+                cursor: 'pointer',
+                flexShrink: 0,
+                opacity: improving || !entry.description ? 0.4 : 1,
+              }}
+            >
+              {improving ? '…' : '✨'}
+            </button>
+          </div>
+        </td>
+        <td style={{ ...td, textAlign: 'center' }}>
+          <button onClick={onRemove} style={{ background: 'none', color: '#aaa', fontSize: '1rem', padding: 4 }} aria-label="Entfernen">✕</button>
+        </td>
+      </tr>
+      {suggestion && (
+        <tr>
+          <td colSpan={4} style={{ padding: '6px 10px', background: '#f0f6ff', borderTop: '1px solid #c8deff' }}>
+            <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: 4 }}>
+              ✨ Vorschlag für Faktura:
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: '0.85rem', flex: 1, fontStyle: 'italic' }}>{suggestion}</span>
+              <button
+                onClick={acceptSuggestion}
+                style={{
+                  background: 'var(--brand)',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: 6,
+                  padding: '4px 10px',
+                  fontSize: '0.78rem',
+                  cursor: 'pointer',
+                  flexShrink: 0,
+                }}
+              >
+                Übernehmen
+              </button>
+              <button
+                onClick={() => setSuggestion(null)}
+                style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '0.85rem' }}
+              >
+                ✕
+              </button>
+            </div>
+          </td>
+        </tr>
+      )}
+    </>
   )
 }
 
