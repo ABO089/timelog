@@ -26,6 +26,7 @@ def run_migrations():
         "ALTER TABLE users ADD COLUMN notify_time VARCHAR DEFAULT '16:30'",
         "ALTER TABLE users ADD COLUMN notify_enabled BOOLEAN DEFAULT 0",
         "ALTER TABLE users ADD COLUMN push_subscription TEXT",
+        "ALTER TABLE projects ADD COLUMN billing_type VARCHAR DEFAULT 'fakturierbar'",
     ]
     with engine.connect() as conn:
         for sql in migrations:

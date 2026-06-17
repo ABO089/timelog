@@ -33,6 +33,7 @@ def entry_to_dict(e: Entry) -> dict:
         "project_name": e.project.name if e.project else None,
         "project_shortcode": e.project.shortcode if e.project else None,
         "project_color": e.project.color if e.project else "#ccc",
+        "billing_type": e.project.billing_type if e.project else "fakturierbar",
         "duration_hours": e.duration_hours,
         "description": e.description,
         "created_at": e.created_at.isoformat() if e.created_at else None,

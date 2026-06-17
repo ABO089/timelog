@@ -1,6 +1,10 @@
 import { useState, useEffect, useCallback } from 'react'
 import { api } from '../api'
 import ProjectBadge from '../components/ProjectBadge'
+import { getMonday, addDays, formatDay, formatKW } from '../utils/date'
+
+const BILLING_LABEL = { fakturierbar: 'Fakturierbar', intern: 'Intern', nicht_fakturierbar: 'Nicht fakturierbar' }
+const BILLING_COLOR = { fakturierbar: '#107e3e', intern: '#0070f2', nicht_fakturierbar: '#6a6d70' }
 
 function CopyText({ text }) {
   const [copied, setCopied] = useState(false)
@@ -23,41 +27,6 @@ function CopyText({ text }) {
       {!copied && <span style={{ opacity: 0.35, fontSize: '0.65rem', flexShrink: 0 }}>⎘</span>}
     </span>
   )
-}
-
-function toLocalISO(d) {
-  const y = d.getFullYear()
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  return `${y}-${m}-${day}`
-}
-
-function getMonday(d) {
-  const date = new Date(d)
-  const day = date.getDay()
-  const diff = (day === 0 ? -6 : 1 - day)
-  date.setDate(date.getDate() + diff)
-  return toLocalISO(date)
-}
-
-function addDays(iso, n) {
-  const d = new Date(iso + 'T00:00:00')
-  d.setDate(d.getDate() + n)
-  return toLocalISO(d)
-}
-
-function formatDay(iso) {
-  return new Date(iso + 'T00:00:00').toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit' })
-}
-
-function formatKW(iso) {
-  const d = new Date(iso + 'T00:00:00')
-  // ISO 8601 week number: shift to nearest Thursday, then count from Jan 4
-  const thu = new Date(d)
-  thu.setDate(d.getDate() + 3 - (d.getDay() + 6) % 7)
-  const jan4 = new Date(thu.getFullYear(), 0, 4)
-  const kw = 1 + Math.round(((thu - jan4) / 86400000 - 3 + (jan4.getDay() + 6) % 7) / 7)
-  return `KW ${kw} / ${thu.getFullYear()}`
 }
 
 function hoursBadgeStyle(h) {
@@ -96,11 +65,17 @@ export default function Week() {
   const byProject = {}
   entries.forEach((e) => {
     if (!byProject[e.project_id]) {
-      byProject[e.project_id] = { name: e.project_name, shortcode: e.project_shortcode, color: e.project_color, total: 0 }
+      byProject[e.project_id] = { name: e.project_name, shortcode: e.project_shortcode, color: e.project_color, billing_type: e.billing_type, total: 0 }
     }
     byProject[e.project_id].total += e.duration_hours
   })
   const grandTotal = entries.reduce((s, e) => s + e.duration_hours, 0)
+
+  const byBilling = {}
+  entries.forEach((e) => {
+    const t = e.billing_type || 'fakturierbar'
+    byBilling[t] = (byBilling[t] || 0) + e.duration_hours
+  })
 
   function buildMarkdown() {
     let md = `## Zeiterfassung ${formatKW(weekStart)}\n\n`
@@ -162,6 +137,19 @@ export default function Week() {
             <span>Gesamt</span>
             <span>{grandTotal.toFixed(2)} h</span>
           </div>
+          {Object.keys(byBilling).length > 0 && (
+            <div style={{ borderTop: '1px solid var(--border)', marginTop: 8, paddingTop: 8, display: 'flex', flexDirection: 'column', gap: 4 }}>
+              {Object.entries(byBilling).map(([type, h]) => (
+                <div key={type} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem' }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: BILLING_COLOR[type] || '#ccc', display: 'inline-block' }} />
+                    {BILLING_LABEL[type] || type}
+                  </span>
+                  <span style={{ color: BILLING_COLOR[type] || 'var(--text-secondary)', fontWeight: 600 }}>{h.toFixed(2)} h</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 

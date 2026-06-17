@@ -34,6 +34,7 @@ class Project(Base):
     aliases = Column(Text, default="[]")  # JSON array
     active = Column(Boolean, default=True)
     pinned = Column(Boolean, default=False)
+    billing_type = Column(String, default="fakturierbar")  # fakturierbar | intern | nicht_fakturierbar
     created_at = Column(DateTime, default=datetime.utcnow)
     sort_order = Column(Integer, default=0)
 

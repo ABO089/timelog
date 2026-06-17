@@ -1,13 +1,12 @@
 import { useState, useEffect, useCallback } from 'react'
 import { api } from '../api'
+import { todayIso, getMonday, addDays, formatKW } from '../utils/date'
 import TextInput from '../components/TextInput'
 import EntryTable from '../components/EntryTable'
 import NewProjectBanner from '../components/NewProjectBanner'
 import ProjectBadge from '../components/ProjectBadge'
 
-function todayIso() {
-  return new Date().toISOString().split('T')[0]
-}
+const DAY_LABELS = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa']
 
 function hoursBadgeClass(h) {
   if (h >= 8) return 'green'
@@ -15,12 +14,17 @@ function hoursBadgeClass(h) {
   return 'red'
 }
 
-function formatDate(iso) {
-  return new Date(iso + 'T00:00:00').toLocaleDateString('de-DE', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })
+function formatDateLong(iso) {
+  return new Date(iso + 'T00:00:00').toLocaleDateString('de-DE', {
+    weekday: 'long', day: '2-digit', month: 'long', year: 'numeric',
+  })
 }
 
 export default function Today() {
-  const today = todayIso()
+  const [selectedDate, setSelectedDate] = useState(todayIso())
+  const [weekStart, setWeekStart] = useState(() => getMonday(new Date()))
+  const [daysWithEntries, setDaysWithEntries] = useState(new Set())
+
   const [projects, setProjects] = useState([])
   const [savedEntries, setSavedEntries] = useState([])
   const [totalHours, setTotalHours] = useState(0)
@@ -32,14 +36,43 @@ export default function Today() {
   const [editingId, setEditingId] = useState(null)
   const [newProjectModal, setNewProjectModal] = useState(null)
 
+  // Keep weekStart in sync with selectedDate
+  useEffect(() => {
+    const monday = getMonday(new Date(selectedDate + 'T00:00:00'))
+    if (monday !== weekStart) setWeekStart(monday)
+  }, [selectedDate])
+
+  // Load dots for the displayed week
+  const loadWeekDots = useCallback(async () => {
+    const data = await api.getWeekEntries(weekStart)
+    setDaysWithEntries(new Set(data.map(e => e.date)))
+  }, [weekStart])
+
+  useEffect(() => { loadWeekDots() }, [loadWeekDots])
+
   const loadDay = useCallback(async () => {
-    const [proj, day] = await Promise.all([api.getProjects(), api.getDayEntries(today)])
+    const [proj, day] = await Promise.all([
+      api.getProjects(),
+      api.getDayEntries(selectedDate),
+    ])
     setProjects(proj)
     setSavedEntries(day.entries)
     setTotalHours(day.total_hours)
-  }, [today])
+  }, [selectedDate])
 
   useEffect(() => { loadDay() }, [loadDay])
+
+  function navigate(days) {
+    const newDate = addDays(selectedDate, days)
+    setSelectedDate(newDate)
+  }
+
+  function jumpToToday() {
+    setSelectedDate(todayIso())
+  }
+
+  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
+  const today = todayIso()
 
   async function handleVoiceResult(text) {
     setParseLoading(true)
@@ -47,7 +80,7 @@ export default function Today() {
     setPreviewEntries([])
     setNewProjectSuggestions([])
     try {
-      const result = await api.parseVoice(text, today)
+      const result = await api.parseVoice(text, selectedDate)
       setPreviewEntries(result.entries || [])
       setNewProjectSuggestions(result.new_project_suggestions || [])
     } catch (e) {
@@ -61,16 +94,16 @@ export default function Today() {
     if (!previewEntries.length) return
     setSaveLoading(true)
     try {
-      const valid = previewEntries.filter((e) => e.project_id && e.hours > 0)
-      await api.createEntriesBulk(valid.map((e) => ({
-        date: today,
+      const valid = previewEntries.filter(e => e.project_id && e.hours > 0)
+      await api.createEntriesBulk(valid.map(e => ({
+        date: selectedDate,
         project_id: e.project_id,
         duration_hours: parseFloat(e.hours),
         description: e.description || '',
       })))
       setPreviewEntries([])
       setNewProjectSuggestions([])
-      await loadDay()
+      await Promise.all([loadDay(), loadWeekDots()])
     } catch (e) {
       alert('Fehler beim Speichern: ' + e.message)
     } finally {
@@ -81,7 +114,7 @@ export default function Today() {
   async function handleDeleteSaved(id) {
     if (!confirm('Eintrag löschen?')) return
     await api.deleteEntry(id)
-    await loadDay()
+    await Promise.all([loadDay(), loadWeekDots()])
   }
 
   async function handleUpdateSaved(id, data) {
@@ -90,32 +123,88 @@ export default function Today() {
     await loadDay()
   }
 
-  async function handleCreateProject(detectedName) {
-    setNewProjectModal(detectedName)
-  }
-
   async function submitNewProject(name, shortcode, color) {
     const proj = await api.createProject({ name, shortcode, color, active: true })
-    setProjects((prev) => [...prev, proj])
-    setNewProjectSuggestions((prev) => prev.filter((s) => s.detected_name !== name))
-    setPreviewEntries((prev) => prev.map((e) =>
+    setProjects(prev => [...prev, proj])
+    setNewProjectSuggestions(prev => prev.filter(s => s.detected_name !== name))
+    setPreviewEntries(prev => prev.map(e =>
       e.project_name === name ? { ...e, project_id: proj.id } : e
     ))
     setNewProjectModal(null)
   }
 
-  const activeProjects = projects.filter((p) => p.active)
+  const activeProjects = projects.filter(p => p.active)
   const pinnedFirst = [...activeProjects].sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0))
 
   return (
     <div>
-      {/* Date + total hours header */}
-      <div style={{ padding: '16px 16px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div>
-          <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.5 }}>Heute</div>
-          <div style={{ fontWeight: 600, fontSize: '1rem', color: 'var(--text-primary)' }}>{formatDate(today)}</div>
+      {/* Date header */}
+      <div style={{ padding: '12px 16px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ fontSize: '0.92rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+          {formatDateLong(selectedDate)}
         </div>
         <span className={`hours-badge ${hoursBadgeClass(totalHours)}`}>{totalHours.toFixed(1)} h</span>
+      </div>
+
+      {/* Week navigator */}
+      <div className="card" style={{ margin: '10px 16px 0', overflow: 'hidden' }}>
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 4,
+          padding: '6px 10px', borderBottom: '1px solid var(--border)',
+        }}>
+          <button
+            onClick={() => { setWeekStart(addDays(weekStart, -7)); setSelectedDate(addDays(selectedDate, -7)) }}
+            className="btn-ghost" style={{ padding: '4px 8px', fontSize: '1rem' }}
+          >‹</button>
+          <span style={{ flex: 1, textAlign: 'center', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
+            {formatKW(weekStart)}
+          </span>
+          {selectedDate !== today && (
+            <button onClick={jumpToToday} className="btn-ghost" style={{ padding: '3px 8px', fontSize: '0.72rem' }}>
+              Heute
+            </button>
+          )}
+          <button
+            onClick={() => { setWeekStart(addDays(weekStart, 7)); setSelectedDate(addDays(selectedDate, 7)) }}
+            className="btn-ghost" style={{ padding: '4px 8px', fontSize: '1rem' }}
+          >›</button>
+        </div>
+
+        {/* Day buttons */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)' }}>
+          {weekDays.map(day => {
+            const d = new Date(day + 'T00:00:00')
+            const isSelected = day === selectedDate
+            const isToday = day === today
+            const hasDot = daysWithEntries.has(day)
+            return (
+              <button
+                key={day}
+                onClick={() => setSelectedDate(day)}
+                style={{
+                  display: 'flex', flexDirection: 'column', alignItems: 'center',
+                  padding: '7px 2px 6px', gap: 2, border: 'none', cursor: 'pointer',
+                  background: isSelected ? 'var(--brand)' : 'transparent',
+                  borderRadius: 6, margin: 3,
+                  color: isSelected ? '#fff' : isToday ? 'var(--brand)' : 'var(--text-primary)',
+                }}
+              >
+                <span style={{ fontSize: '0.62rem', fontWeight: 500, opacity: isSelected ? 0.85 : 0.7 }}>
+                  {DAY_LABELS[d.getDay()]}
+                </span>
+                <span style={{ fontSize: '0.9rem', fontWeight: isToday || isSelected ? 700 : 400 }}>
+                  {d.getDate()}
+                </span>
+                <div style={{
+                  width: 4, height: 4, borderRadius: '50%',
+                  background: hasDot
+                    ? (isSelected ? 'rgba(255,255,255,0.8)' : 'var(--brand)')
+                    : 'transparent',
+                }} />
+              </button>
+            )
+          })}
+        </div>
       </div>
 
       {/* Text input */}
@@ -127,18 +216,16 @@ export default function Today() {
         </div>
       )}
 
-      {/* New project suggestions */}
       {newProjectSuggestions.map((s, i) => (
         <div key={i} style={{ margin: '0 16px 10px' }}>
           <NewProjectBanner
             detectedName={s.detected_name}
-            onAccept={() => handleCreateProject(s.detected_name)}
-            onIgnore={() => setNewProjectSuggestions((prev) => prev.filter((_, j) => j !== i))}
+            onAccept={() => setNewProjectModal(s.detected_name)}
+            onIgnore={() => setNewProjectSuggestions(prev => prev.filter((_, j) => j !== i))}
           />
         </div>
       ))}
 
-      {/* Preview entries */}
       {previewEntries.length > 0 && (
         <div className="card" style={{ margin: '0 16px 16px' }}>
           <div style={{ padding: '12px 12px 8px', fontWeight: 600, borderBottom: '1px solid var(--border)' }}>
@@ -147,10 +234,10 @@ export default function Today() {
           <EntryTable
             entries={previewEntries}
             projects={pinnedFirst}
-            onChange={(i, upd) => setPreviewEntries((prev) => prev.map((e, j) => j === i ? upd : e))}
-            onRemove={(i) => setPreviewEntries((prev) => prev.filter((_, j) => j !== i))}
+            onChange={(i, upd) => setPreviewEntries(prev => prev.map((e, j) => j === i ? upd : e))}
+            onRemove={(i) => setPreviewEntries(prev => prev.filter((_, j) => j !== i))}
           />
-          <div style={{ padding: '12px 12px 12px', display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+          <div style={{ padding: '12px', display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
             <button className="btn-ghost" onClick={() => setPreviewEntries([])}>Verwerfen</button>
             <button className="btn-primary" onClick={handleSave} disabled={saveLoading}>
               {saveLoading ? 'Speichert…' : '💾 Speichern'}
@@ -160,24 +247,24 @@ export default function Today() {
       )}
 
       {/* Saved entries */}
-      <div style={{ padding: '0 16px' }}>
-        <div style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: 10, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+      <div style={{ padding: '0 16px 16px' }}>
+        <div style={{ fontWeight: 600, fontSize: '0.78rem', color: 'var(--text-secondary)', margin: '12px 0 8px', textTransform: 'uppercase', letterSpacing: 0.5 }}>
           Gespeicherte Einträge
         </div>
         {savedEntries.length === 0 ? (
           <div className="card" style={{ padding: 24, textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
-            Noch keine Einträge heute — Tätigkeiten oben eingeben.
+            Noch keine Einträge für diesen Tag.
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {savedEntries.map((e) => (
+            {savedEntries.map(e => (
               <SavedEntryRow
                 key={e.id}
                 entry={e}
                 projects={pinnedFirst}
                 isEditing={editingId === e.id}
                 onEdit={() => setEditingId(e.id)}
-                onSave={(data) => handleUpdateSaved(e.id, data)}
+                onSave={data => handleUpdateSaved(e.id, data)}
                 onCancel={() => setEditingId(null)}
                 onDelete={() => handleDeleteSaved(e.id)}
               />
@@ -186,7 +273,6 @@ export default function Today() {
         )}
       </div>
 
-      {/* New project quick-create modal */}
       {newProjectModal && (
         <QuickCreateProject
           detectedName={newProjectModal}
@@ -201,25 +287,11 @@ export default function Today() {
 function CopyText({ text }) {
   const [copied, setCopied] = useState(false)
   if (!text) return null
-  function handleCopy() {
-    navigator.clipboard.writeText(text).then(() => {
-      setCopied(true)
-      setTimeout(() => setCopied(false), 1500)
-    })
-  }
   return (
     <div
-      onClick={handleCopy}
+      onClick={() => navigator.clipboard.writeText(text).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1500) })}
       title="Klicken zum Kopieren"
-      style={{
-        fontSize: '0.82rem',
-        color: copied ? 'var(--green)' : 'var(--text-secondary)',
-        cursor: 'pointer',
-        display: 'flex',
-        alignItems: 'center',
-        gap: 4,
-        overflow: 'hidden',
-      }}
+      style={{ fontSize: '0.82rem', color: copied ? 'var(--green)' : 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, overflow: 'hidden' }}
     >
       <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
         {copied ? '✓ Kopiert!' : text}
@@ -251,11 +323,11 @@ function SavedEntryRow({ entry, projects, isEditing, onEdit, onSave, onCancel, o
   return (
     <div className="card" style={{ padding: 12 }}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        <select value={projectId} onChange={(e) => setProjectId(parseInt(e.target.value))}>
-          {projects.map((p) => <option key={p.id} value={p.id}>{p.shortcode} – {p.name}</option>)}
+        <select value={projectId} onChange={e => setProjectId(parseInt(e.target.value))}>
+          {projects.map(p => <option key={p.id} value={p.id}>{p.shortcode} – {p.name}</option>)}
         </select>
-        <input type="number" min="0.25" step="0.25" value={hours} onChange={(e) => setHours(e.target.value)} />
-        <input type="text" value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Beschreibung" />
+        <input type="number" min="0.25" step="0.25" value={hours} onChange={e => setHours(e.target.value)} />
+        <input type="text" value={desc} onChange={e => setDesc(e.target.value)} placeholder="Beschreibung" />
         <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
           <button className="btn-ghost" onClick={onCancel}>Abbrechen</button>
           <button className="btn-primary" onClick={() => onSave({ project_id: projectId, duration_hours: parseFloat(hours), description: desc })}>Speichern</button>
@@ -275,11 +347,11 @@ function QuickCreateProject({ detectedName, onSubmit, onClose }) {
       <div style={{ background: '#fff', borderRadius: '16px 16px 0 0', padding: 24, width: '100%', maxWidth: 480, margin: '0 auto' }}>
         <div style={{ fontWeight: 700, fontSize: '1.1rem', marginBottom: 16 }}>Neues Projekt anlegen</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Projektname" />
-          <input value={shortcode} onChange={(e) => setShortcode(e.target.value)} placeholder="Kürzel (z.B. ZIM)" maxLength={6} />
+          <input value={name} onChange={e => setName(e.target.value)} placeholder="Projektname" />
+          <input value={shortcode} onChange={e => setShortcode(e.target.value)} placeholder="Kürzel (z.B. ZIM)" maxLength={6} />
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <label style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', flexShrink: 0 }}>Farbe:</label>
-            <input type="color" value={color} onChange={(e) => setColor(e.target.value)} style={{ width: 44, height: 36, padding: 2, cursor: 'pointer' }} />
+            <input type="color" value={color} onChange={e => setColor(e.target.value)} style={{ width: 44, height: 36, padding: 2, cursor: 'pointer' }} />
           </div>
         </div>
         <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>

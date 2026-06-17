@@ -4,6 +4,12 @@ import ProjectBadge from '../components/ProjectBadge'
 
 const COLORS = ['#0070F2', '#107e3e', '#bb0000', '#e9730c', '#6800d4', '#00627a', '#5a2a82', '#c87b00']
 
+const BILLING_OPTIONS = [
+  { value: 'fakturierbar', label: 'Fakturierbar', color: '#107e3e' },
+  { value: 'intern', label: 'Intern', color: '#0070f2' },
+  { value: 'nicht_fakturierbar', label: 'Keine Faktura', color: '#6a6d70' },
+]
+
 export default function Projects() {
   const [projects, setProjects] = useState([])
   const [editing, setEditing] = useState(null)
@@ -18,7 +24,7 @@ export default function Projects() {
   useEffect(() => { load() }, [load])
 
   function emptyForm() {
-    return { name: '', shortcode: '', client_name: '', color: '#0070F2', aliases: '', active: true, pinned: false }
+    return { name: '', shortcode: '', client_name: '', color: '#0070F2', aliases: '', active: true, pinned: false, billing_type: 'fakturierbar' }
   }
 
   function openNew() {
@@ -91,7 +97,10 @@ export default function Projects() {
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <ProjectBadge color={p.color} name={p.name} shortcode={p.shortcode} />
               <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 600, fontSize: '0.95rem' }}>{p.name}</div>
+                <div style={{ fontWeight: 600, fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  {p.name}
+                  {(() => { const b = BILLING_OPTIONS.find(o => o.value === (p.billing_type || 'fakturierbar')); return b ? <span style={{ fontSize: '0.65rem', background: b.color + '18', color: b.color, border: `1px solid ${b.color}40`, borderRadius: 10, padding: '1px 7px', fontWeight: 600 }}>{b.label}</span> : null })()}
+                </div>
                 {p.client_name && <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>{p.client_name}</div>}
                 {p.aliases?.length > 0 && <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Aliase: {p.aliases.join(', ')}</div>}
               </div>
@@ -146,6 +155,24 @@ export default function Projects() {
                     }} />
                   ))}
                   <input type="color" value={form.color} onChange={(e) => setForm({ ...form, color: e.target.value })} style={{ width: 32, height: 32, padding: 1, borderRadius: '50%', cursor: 'pointer' }} />
+                </div>
+              </div>
+              <div>
+                <label style={labelStyle}>Abrechnungsart</label>
+                <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
+                  {BILLING_OPTIONS.map(o => (
+                    <button
+                      key={o.value}
+                      type="button"
+                      onClick={() => setForm({ ...form, billing_type: o.value })}
+                      style={{
+                        flex: 1, padding: '7px 4px', borderRadius: 8, cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600, border: '2px solid',
+                        borderColor: form.billing_type === o.value ? o.color : 'var(--border)',
+                        background: form.billing_type === o.value ? o.color + '15' : 'transparent',
+                        color: form.billing_type === o.value ? o.color : 'var(--text-secondary)',
+                      }}
+                    >{o.label}</button>
+                  ))}
                 </div>
               </div>
               <div>
