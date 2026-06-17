@@ -49,4 +49,11 @@ export const api = {
 
   // Parse
   parseVoice: (text, date) => req('POST', '/parse-voice', { text, entry_date: date }),
+
+  // Push notifications
+  getVapidKey: () => req('GET', '/push/vapid-key'),
+  subscribePush: (sub) => req('POST', '/push/subscribe', sub),
+  unsubscribePush: () => req('DELETE', '/push/subscribe'),
+  updateNotifySettings: (data) => req('PATCH', '/push/settings', data),
+  testPush: () => req('POST', '/push/test'),
 }

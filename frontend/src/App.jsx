@@ -8,11 +8,21 @@ const navItems = [
   { to: '/projects', label: 'Projekte', icon: '📁' },
 ]
 
+function urlB64ToUint8Array(b64) {
+  const pad = '='.repeat((4 - b64.length % 4) % 4)
+  const raw = atob((b64 + pad).replace(/-/g, '+').replace(/_/g, '/'))
+  return Uint8Array.from([...raw].map(c => c.charCodeAt(0)))
+}
+
 export default function App({ email, onLogout }) {
   const [showProfile, setShowProfile] = useState(false)
   const [jobContext, setJobContext] = useState(localStorage.getItem('job_context') || 'SAP Berater')
   const [jobInput, setJobInput] = useState(jobContext)
   const [saving, setSaving] = useState(false)
+  const [notifyTime, setNotifyTime] = useState('16:30')
+  const [notifyEnabled, setNotifyEnabled] = useState(false)
+  const [hasPush, setHasPush] = useState(false)
+  const [pushStatus, setPushStatus] = useState('')
 
   async function handleSaveProfile() {
     setSaving(true)
@@ -26,6 +36,50 @@ export default function App({ email, onLogout }) {
     }
   }
 
+  async function handleNotifyToggle(enabled) {
+    if (enabled && !hasPush) {
+      await subscribePush()
+    } else {
+      await api.updateNotifySettings({ notify_enabled: enabled })
+      setNotifyEnabled(enabled)
+      if (!enabled) setPushStatus('')
+    }
+  }
+
+  async function handleNotifyTimeChange(time) {
+    setNotifyTime(time)
+    await api.updateNotifySettings({ notify_time: time })
+  }
+
+  async function subscribePush() {
+    try {
+      const perm = await Notification.requestPermission()
+      if (perm !== 'granted') { setPushStatus('Benachrichtigungen wurden blockiert.'); return }
+      const reg = await navigator.serviceWorker.ready
+      const { public_key } = await api.getVapidKey()
+      const sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlB64ToUint8Array(public_key),
+      })
+      const subJson = sub.toJSON()
+      await api.subscribePush(subJson)
+      setHasPush(true)
+      setNotifyEnabled(true)
+      setPushStatus('✓ Benachrichtigungen aktiviert')
+    } catch (e) {
+      setPushStatus('Fehler: ' + e.message)
+    }
+  }
+
+  async function handleTestPush() {
+    try {
+      await api.testPush()
+      setPushStatus('Test-Benachrichtigung gesendet!')
+    } catch (e) {
+      setPushStatus('Fehler: ' + e.message)
+    }
+  }
+
   useEffect(() => {
     api.me().then(u => {
       if (u.job_context) {
@@ -33,6 +87,9 @@ export default function App({ email, onLogout }) {
         setJobInput(u.job_context)
         localStorage.setItem('job_context', u.job_context)
       }
+      if (u.notify_time) setNotifyTime(u.notify_time)
+      setNotifyEnabled(!!u.notify_enabled)
+      setHasPush(!!u.has_push)
     }).catch(() => {})
   }, [])
 
@@ -160,7 +217,58 @@ export default function App({ email, onLogout }) {
                 ))}
               </div>
             </div>
-            <div style={{ display: 'flex', gap: 8 }}>
+            {/* Notifications section */}
+            <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16, marginTop: 4 }}>
+              <div style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 12 }}>
+                Erinnerung
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                <label style={{ fontSize: '0.9rem' }}>Benachrichtigungen</label>
+                <button
+                  onClick={() => handleNotifyToggle(!notifyEnabled)}
+                  style={{
+                    background: notifyEnabled ? 'var(--brand)' : 'var(--border)',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: 20,
+                    padding: '5px 14px',
+                    fontSize: '0.82rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    transition: 'background 0.2s',
+                  }}
+                >
+                  {notifyEnabled ? 'An' : 'Aus'}
+                </button>
+              </div>
+              {notifyEnabled && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                  <label style={{ fontSize: '0.85rem', flexShrink: 0 }}>Täglich um</label>
+                  <input
+                    type="time"
+                    value={notifyTime}
+                    onChange={e => handleNotifyTimeChange(e.target.value)}
+                    style={{ width: 'auto', flex: 1 }}
+                  />
+                </div>
+              )}
+              {hasPush && notifyEnabled && (
+                <button
+                  onClick={handleTestPush}
+                  className="btn-ghost"
+                  style={{ fontSize: '0.78rem', padding: '4px 10px' }}
+                >
+                  Test-Benachrichtigung senden
+                </button>
+              )}
+              {pushStatus && (
+                <div style={{ fontSize: '0.78rem', marginTop: 6, color: pushStatus.startsWith('✓') ? 'var(--green)' : 'var(--red)' }}>
+                  {pushStatus}
+                </div>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
               <button className="btn-ghost" style={{ flex: 1 }} onClick={() => setShowProfile(false)}>Abbrechen</button>
               <button className="btn-primary" style={{ flex: 2 }} onClick={handleSaveProfile} disabled={saving}>
                 {saving ? 'Speichert…' : 'Speichern'}

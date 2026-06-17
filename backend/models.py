@@ -4,6 +4,12 @@ from datetime import datetime, date
 from database import Base
 
 
+class Config(Base):
+    __tablename__ = "config"
+    key = Column(String, primary_key=True)
+    value = Column(Text)
+
+
 class User(Base):
     __tablename__ = "users"
 
@@ -11,6 +17,9 @@ class User(Base):
     email = Column(String, unique=True, nullable=False, index=True)
     hashed_password = Column(String, nullable=False)
     job_context = Column(String, default="SAP Berater")
+    notify_time = Column(String, default="16:30")
+    notify_enabled = Column(Boolean, default=False)
+    push_subscription = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
 

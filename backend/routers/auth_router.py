@@ -46,7 +46,14 @@ def register(data: RegisterRequest, db: Session = Depends(get_db)):
 
 @router.get("/me")
 def me(user: User = Depends(require_auth)):
-    return {"id": user.id, "email": user.email, "job_context": user.job_context}
+    return {
+        "id": user.id,
+        "email": user.email,
+        "job_context": user.job_context,
+        "notify_time": user.notify_time or "16:30",
+        "notify_enabled": bool(user.notify_enabled),
+        "has_push": bool(user.push_subscription),
+    }
 
 
 @router.patch("/profile")
@@ -55,7 +62,13 @@ def update_profile(data: ProfileUpdate, user: User = Depends(require_auth), db: 
         user.job_context = data.job_context
     db.commit()
     db.refresh(user)
-    return {"email": user.email, "job_context": user.job_context}
+    return {
+        "email": user.email,
+        "job_context": user.job_context,
+        "notify_time": user.notify_time or "16:30",
+        "notify_enabled": bool(user.notify_enabled),
+        "has_push": bool(user.push_subscription),
+    }
 
 
 @router.post("/logout")
