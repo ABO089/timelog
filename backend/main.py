@@ -7,6 +7,22 @@ from routers import auth_router
 
 Base.metadata.create_all(bind=engine)
 
+# Safe column migrations — add new columns without dropping data
+def run_migrations():
+    from sqlalchemy import text
+    migrations = [
+        "ALTER TABLE users ADD COLUMN job_context VARCHAR DEFAULT 'SAP Berater'",
+    ]
+    with engine.connect() as conn:
+        for sql in migrations:
+            try:
+                conn.execute(text(sql))
+                conn.commit()
+            except Exception:
+                pass  # column already exists
+
+run_migrations()
+
 app = FastAPI(title="TimeLog API")
 
 app.add_middleware(
