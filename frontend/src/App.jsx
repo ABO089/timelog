@@ -38,19 +38,8 @@ export default function App({ email, onLogout }) {
 
   return (
     <>
-      <header style={{
-        background: 'var(--shell-bg)',
-        color: '#fff',
-        padding: '0 16px',
-        height: 52,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        flexShrink: 0,
-        position: 'sticky',
-        top: 0,
-        zIndex: 100,
-      }}>
+      {/* Shell header */}
+      <header className="shell-header">
         <span style={{ fontWeight: 700, fontSize: '1.1rem', letterSpacing: 0.5 }}>⏱ TimeLog</span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <button
@@ -85,22 +74,34 @@ export default function App({ email, onLogout }) {
         </div>
       </header>
 
-      <main style={{ flex: 1, overflowY: 'auto', paddingBottom: 72 }}>
-        <Outlet />
-      </main>
+      {/* App body: sidebar (desktop) + content */}
+      <div className="app-body">
+        {/* Sidebar — only visible on desktop via CSS */}
+        <aside className="sidebar">
+          {navItems.map(({ to, label, icon }) => (
+            <NavLink
+              key={to}
+              to={to}
+              className={({ isActive }) => 'sidebar-link' + (isActive ? ' active' : '')}
+            >
+              <span className="nav-icon">{icon}</span>
+              {label}
+            </NavLink>
+          ))}
+          <div style={{ flex: 1 }} />
+          <div style={{ padding: '12px 20px', fontSize: '0.72rem', color: 'var(--text-secondary)', borderTop: '1px solid var(--border)' }}>
+            {jobContext}
+          </div>
+        </aside>
 
-      <nav style={{
-        position: 'fixed',
-        bottom: 0,
-        left: '50%',
-        transform: 'translateX(-50%)',
-        width: '100%',
-        maxWidth: 480,
-        background: '#fff',
-        borderTop: '1px solid var(--border)',
-        display: 'flex',
-        zIndex: 100,
-      }}>
+        {/* Main content */}
+        <main className="app-content">
+          <Outlet />
+        </main>
+      </div>
+
+      {/* Bottom tab bar — only visible on mobile via CSS */}
+      <nav className="tab-bar">
         {navItems.map(({ to, label, icon }) => (
           <NavLink key={to} to={to} style={({ isActive }) => ({
             flex: 1,

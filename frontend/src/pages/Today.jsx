@@ -166,7 +166,7 @@ export default function Today() {
         </div>
         {savedEntries.length === 0 ? (
           <div className="card" style={{ padding: 24, textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
-            Noch keine Einträge heute. Spracheingabe nutzen ☝️
+            Noch keine Einträge heute — Tätigkeiten oben eingeben.
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>

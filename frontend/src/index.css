@@ -26,14 +26,121 @@ body {
 }
 
 #root {
-  max-width: 480px;
-  margin: 0 auto;
   min-height: 100dvh;
   display: flex;
   flex-direction: column;
-  position: relative;
 }
 
+/* ── Shell header ── */
+.shell-header {
+  background: var(--shell-bg);
+  color: #fff;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  flex-shrink: 0;
+}
+
+/* ── App body (sidebar + content) ── */
+.app-body {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* ── Sidebar nav (hidden on mobile) ── */
+.sidebar {
+  display: none;
+}
+
+/* ── Main content area ── */
+.app-content {
+  flex: 1;
+  overflow-y: auto;
+  padding-bottom: 72px;
+}
+
+/* ── Bottom tab bar (mobile only) ── */
+.tab-bar {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 480px;
+  background: #fff;
+  border-top: 1px solid var(--border);
+  display: flex;
+  z-index: 100;
+  height: 60px;
+}
+
+/* ── Desktop breakpoint ── */
+@media (min-width: 768px) {
+  #root {
+    max-width: 1100px;
+    margin: 0 auto;
+    box-shadow: 0 0 40px rgba(0,0,0,0.1);
+  }
+
+  .shell-header {
+    border-radius: 0;
+  }
+
+  .sidebar {
+    display: flex;
+    flex-direction: column;
+    width: 200px;
+    background: var(--card-bg);
+    border-right: 1px solid var(--border);
+    flex-shrink: 0;
+    padding: 12px 0;
+  }
+
+  .sidebar-link {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 11px 20px;
+    text-decoration: none;
+    color: var(--text-secondary);
+    font-size: 0.92rem;
+    font-weight: 500;
+    transition: background 0.12s, color 0.12s;
+    border-left: 3px solid transparent;
+  }
+  .sidebar-link:hover {
+    background: var(--page-bg);
+    color: var(--text-primary);
+  }
+  .sidebar-link.active {
+    color: var(--brand);
+    background: #e8f1fd;
+    border-left-color: var(--brand);
+    font-weight: 600;
+  }
+  .sidebar-link .nav-icon {
+    font-size: 1.2rem;
+    width: 24px;
+    text-align: center;
+  }
+
+  .app-content {
+    padding-bottom: 24px;
+  }
+
+  .tab-bar {
+    display: none;
+  }
+}
+
+/* ── Shared elements ── */
 button {
   cursor: pointer;
   font-family: var(--font);
@@ -73,6 +180,7 @@ input:focus, select:focus, textarea:focus {
   font-weight: 600;
 }
 .btn-primary:hover { background: var(--brand-dark); }
+.btn-primary:disabled { opacity: 0.5; cursor: default; }
 
 .btn-secondary {
   background: transparent;

@@ -20,7 +20,7 @@ export default function TextInput({ onResult, loading }) {
         onChange={e => setText(e.target.value)}
         onKeyDown={handleKeyDown}
         rows={4}
-        placeholder="Tätigkeiten eingeben – z.B.: ZIM 2h Konzeption, Fuchs 1,5h Workshop, intern 30min Meeting"
+        placeholder="Tätigkeiten eingeben…"
         style={{
           width: '100%',
           fontSize: '0.95rem',
