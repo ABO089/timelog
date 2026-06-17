@@ -35,16 +35,16 @@ Kostenloser Tier reicht für den Einstieg. Key liegt unter: `API Keys → Create
 
 ## 2. Projekt auf den Server kopieren
 
-**Von Windows (PowerShell):**
-
-```powershell
-scp -r C:\Users\aljos\Documents\PROJEKT\timelog aljoscha@192.168.178.198:/srv/timelog
-```
-
-Verzeichnis auf dem Server prüfen:
+**Via GitHub (empfohlen):**
 
 ```bash
 ssh aljoscha@192.168.178.198
+git clone https://github.com/ABO089/timelog.git /srv/timelog
+```
+
+Verzeichnis prüfen:
+
+```bash
 ls /srv/timelog
 ```
 
@@ -247,14 +247,15 @@ Alternativ erscheint bei Chrome automatisch ein **"App installieren"**-Banner am
 
 ## 9. Update-Prozess
 
-Neue Version von Windows auf den Server deployen:
+Neue Version deployen — alles über GitHub:
 
-```powershell
-# Von Windows (PowerShell) — alles in einem
-scp -r C:\Users\aljos\Documents\PROJEKT\timelog\backend aljoscha@192.168.178.198:/srv/timelog/ ; scp -r C:\Users\aljos\Documents\PROJEKT\timelog\frontend aljoscha@192.168.178.198:/srv/timelog/ ; scp C:\Users\aljos\Documents\PROJEKT\timelog\docker-compose.yml aljoscha@192.168.178.198:/srv/timelog/
+```bash
+ssh aljoscha@192.168.178.198
+cd /srv/timelog
+git pull && docker compose up -d --build
 ```
 
-Dann auf dem Server neu bauen:
+Das ist der komplette Update-Prozess. Auf dem Entwicklungsrechner vorher committen und pushen:
 
 ```bash
 ssh aljoscha@192.168.178.198
