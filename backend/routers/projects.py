@@ -5,9 +5,10 @@ from typing import Optional
 import json
 
 from database import get_db
-from models import Project
+from models import Project, User
+from auth import require_auth
 
-router = APIRouter(prefix="/api/projects", tags=["projects"])
+router = APIRouter(prefix="/api/projects", tags=["projects"], dependencies=[Depends(require_auth)])
 
 
 class ProjectCreate(BaseModel):

@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from database import engine
 from models import Base
 from routers import entries, projects, parse
+from routers import auth_router
 
 Base.metadata.create_all(bind=engine)
 
@@ -16,6 +17,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(auth_router.router)
 app.include_router(projects.router)
 app.include_router(entries.router)
 app.include_router(parse.router)

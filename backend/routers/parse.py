@@ -8,9 +8,10 @@ import json
 import os
 
 from database import get_db
-from models import Project, VoiceLog
+from models import Project, VoiceLog, User
+from auth import require_auth
 
-router = APIRouter(prefix="/api", tags=["parse"])
+router = APIRouter(prefix="/api", tags=["parse"], dependencies=[Depends(require_auth)])
 
 MISTRAL_API_KEY = os.getenv("MISTRAL_API_KEY", "")
 MISTRAL_MODEL = "mistral-large-latest"

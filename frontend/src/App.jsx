@@ -6,7 +6,7 @@ const navItems = [
   { to: '/projects', label: 'Projekte', icon: '📁' },
 ]
 
-export default function App() {
+export default function App({ email, onLogout }) {
   return (
     <>
       <header style={{
@@ -23,7 +23,23 @@ export default function App() {
         zIndex: 100,
       }}>
         <span style={{ fontWeight: 700, fontSize: '1.1rem', letterSpacing: 0.5 }}>⏱ TimeLog</span>
-        <span style={{ fontSize: '0.8rem', opacity: 0.7 }}>SAP Consultant</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span style={{ fontSize: '0.78rem', opacity: 0.7 }}>{email}</span>
+          <button
+            onClick={onLogout}
+            style={{
+              background: 'rgba(255,255,255,0.15)',
+              color: '#fff',
+              border: '1px solid rgba(255,255,255,0.3)',
+              borderRadius: 6,
+              padding: '4px 10px',
+              fontSize: '0.78rem',
+              cursor: 'pointer',
+            }}
+          >
+            Abmelden
+          </button>
+        </div>
       </header>
 
       <main style={{ flex: 1, overflowY: 'auto', paddingBottom: 72 }}>

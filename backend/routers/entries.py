@@ -6,9 +6,10 @@ from datetime import date, datetime, timedelta
 import json
 
 from database import get_db
-from models import Entry, Project
+from models import Entry, Project, User
+from auth import require_auth
 
-router = APIRouter(prefix="/api/entries", tags=["entries"])
+router = APIRouter(prefix="/api/entries", tags=["entries"], dependencies=[Depends(require_auth)])
 
 
 class EntryCreate(BaseModel):
