@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from datetime import date
+from typing import Optional
 import httpx
 import json
 import os
@@ -17,7 +18,7 @@ MISTRAL_MODEL = "mistral-large-latest"
 
 class ParseRequest(BaseModel):
     text: str
-    date: date | None = None
+    entry_date: Optional[date] = None
 
 
 def build_prompt(text: str, projects: list[dict], today: str) -> str:
@@ -76,7 +77,7 @@ async def parse_voice(req: ParseRequest, db: Session = Depends(get_db)):
         for p in projects
     ]
 
-    today = (req.date or date.today()).isoformat()
+    today = (req.entry_date or date.today()).isoformat()
     prompt = build_prompt(req.text, project_list, today)
 
     try:
