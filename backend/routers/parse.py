@@ -22,60 +22,52 @@ class ParseRequest(BaseModel):
     entry_date: Optional[date] = None
 
 
-SAP_PRODUCTS = """Bekannte SAP-Produktnamen und korrekte Schreibweisen (immer so normalisieren):
-- SAP Ariba (nicht: arriba, Arriba, ariba) – Beschaffungsplattform; Module: Ariba Invoicing, Ariba Sourcing, Ariba Contracts, Ariba Network
-- SAP S/4HANA (nicht: S4, S4Hana, s4hana)
-- SAP ECC / R/3
-- SAP Fiori
-- SAP BTP (Business Technology Platform)
-- SAP SuccessFactors
-- SAP Concur
-- SAP MDG (Master Data Governance)
-- SAP GRC
-- SAP PI/PO / SAP Integration Suite
-- SAP Analytics Cloud (SAC)
-- SAP Datasphere
-- SAP IBP (Integrated Business Planning)
-- SAP MM, SD, FI, CO, PP, WM, EWM, HCM (Modulkürzel großschreiben)
-"""
+SAP_PRODUCTS = """SAP-Produktliste (Ariba, S/4HANA, BTP, Fiori, SuccessFactors, ABAP, Customizing, Transportauftrag, OData, SAP GUI, Basis, FI/CO, MM, SD, PP, WM, EWM, HCM, MDG, GRC, PI/PO, Integration Suite, Analytics Cloud / SAC, Datasphere, IBP, Concur, ECC / R/3)"""
+
 
 def build_prompt(text: str, projects: list[dict], today: str, job_context: str) -> str:
     project_list = json.dumps(projects, ensure_ascii=False, indent=2)
-    sap_context = SAP_PRODUCTS if "sap" in job_context.lower() else ""
-    return f"""Du bist ein intelligenter Zeiterfassungs-Assistent für eine Fachkraft im Bereich "{job_context}".
+    return f"""Du bist ein intelligenter Zeiterfassungs-Assistent für einen hochspezialisierten SAP-Berater.
 
 Deine Aufgabe: Extrahiere strukturierte Arbeitszeitbuchungen aus dem folgenden Freitext (Deutsch).
 
 Benutzer-Rolle: {job_context}
 Datum heute: {today}
-{sap_context}
+
+{SAP_PRODUCTS}
+
 Bekannte Projekte (id, name, shortcode, aliases):
 {project_list}
 
-Regeln:
-1. Extrahiere ALLE erwähnten Projektzeitbuchungen.
-2. Projekt-Matching — Priorität in dieser Reihenfolge:
+STRIKTE REGELN FÜR SPEECH-TO-TEXT & KONTEXT-OPTIMIERUNG (Höchste Priorität):
+1. TYPO- & HÖRFEHLER-KORREKTUR: Der Input stammt aus einer Sprache-zu-Text-Eingabe. Korrigiere typische "Verhörer" (z.B. "Abend" oder "Aber" → "ABAP", "Theorie" → "Fiori", "BDP" → "BTP", "Kastomeising" → "Customizing"). Nutze die SAP-Produktliste als Referenz.
+2. INTERNES SAP-FACHWISSEN NUTZEN: Wenn du auf einen unklaren Begriff stößt, der nach einem Tippfehler oder einem unbekannten SAP-Objekt/Modul/Framework klingt, nutze dein tiefes, internes SAP-Fachwissen, um den technologisch korrekten Begriff zu deduzieren und einzusetzen (Kontext-Abgleich).
+3. PROFESSIONALISIERUNG FÜR RECHNUNGEN: Formuliere die Beschreibungen so um, dass sie direkt auf einer Kundenrechnung ausgewiesen werden können. Nutze einen beratungstypischen, professionellen und prägnanten Stil. Beginne idealerweise mit aktiven Substantiven oder Verben (z.B. "Analyse von...", "Konzeptionierung...", "Implementierung...", "Fehlerbehebung im Bereich...").
+4. STRIKTE ANONYMISIERUNG: Erwähne NIEMALS konkrete Personennamen (z.B. "Herr Müller", "die Sabine") oder externe Firmennamen im finalen Beschreibungstext. Ersetze diese konsequent durch "Ansprechpartner des Kunden" oder "Projektteam". Der Text muss für den Endkunden freigegeben werden können.
+5. SAP-FOKUS: Achte penibel darauf, dass der SAP-spezifische Kontext (Modulnamen, technische Begriffe) im optimierten Text erhalten bleibt und korrekt angewendet wird.
+
+PROJEKT-MATCHING-REGELN:
+6. Extrahiere ALLE erwähnten Projektzeitbuchungen.
+7. Projekt-Matching — Priorität in dieser Reihenfolge:
    a) Exakter Shortcode-Treffer (case-insensitiv) → confidence: 1.0, KEIN Fuzzy-Matching, KEINE Verwechslung ähnlicher Kürzel (ZIM ≠ CIM, RK ≠ FK, etc.)
    b) Exakter Name-Treffer oder Alias-Treffer → confidence: 0.95
    c) Fuzzy-Matching nur wenn kein exakter Treffer → confidence je nach Ähnlichkeit
-3. Konfidenz >= 0.8 → project_id setzen. Darunter → project_id: null + new_project_suggestions Eintrag.
-4. Stundenangaben: "halbe Stunde" = 0.5, "anderthalb" = 1.5, "Viertel" = 0.25, "dreiviertel" = 0.75.
-5. Kein Datum im Text → heutiges Datum verwenden: {today}.
-6. Beschreibung: Bleib nah am Original-Input. Korrigiere nur Schreibfehler und SAP-Produktnamen.
-   Kürze NICHT — der Nutzer möchte seine Formulierung behalten. Umgangssprache stehenlassen.
-7. SAP-Produktnamen IMMER in korrekter Schreibweise (siehe Liste oben). Sonst: Original übernehmen.
-8. NIEMALS Projektnamen erfinden die nicht in der Liste stehen. Nur bekannte Projekte verwenden oder new_project_suggestions.
+8. Konfidenz >= 0.8 → project_id setzen. Darunter → project_id: null + new_project_suggestions Eintrag.
+9. Stundenangaben: "halbe Stunde" = 0.5, "anderthalb" = 1.5, "Viertel" = 0.25, "dreiviertel" = 0.75.
+10. Kein Datum im Text → heutiges Datum verwenden: {today}.
+11. NIEMALS Projektnamen erfinden die nicht in der Liste stehen.
 
-Antworte NUR mit gültigem JSON:
+RÜCKGABEFORMAT (Striktes JSON):
+Antworte AUSSCHLIESSLICH im folgenden JSON-Format ohne zusätzlichen Text oder Markdown:
 {{
   "date": "YYYY-MM-DD",
   "total_hours": 8.0,
   "entries": [
     {{
-      "project_id": 3,
-      "project_name": "ZIM",
-      "hours": 0.5,
-      "description": "Abstimmungsgespräch Projektteam",
+      "project_id": 1,
+      "project_name": "CIM Thementeam",
+      "hours": 1.5,
+      "description": "Analyse von Customizing-Einstellungen im SAP FI-Modul mit Projektteam",
       "confidence": 0.95
     }}
   ],
