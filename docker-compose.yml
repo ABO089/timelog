@@ -4,10 +4,10 @@ services:
     restart: unless-stopped
     environment:
       - MISTRAL_API_KEY=${MISTRAL_API_KEY}
+      - GLADIA_API_KEY=${GLADIA_API_KEY}
       - DB_PATH=/data/timelog.db
     volumes:
       - timelog_data:/data
-      - whisper_models:/app/whisper_models
     ports:
       - "8011:8010"
 
@@ -21,4 +21,3 @@ services:
 
 volumes:
   timelog_data:
-  whisper_models:
