@@ -7,8 +7,9 @@ services:
       - DB_PATH=/data/timelog.db
     volumes:
       - timelog_data:/data
+      - whisper_models:/app/whisper_models
     ports:
-      - "8010:8010"
+      - "8011:8010"
 
   frontend:
     build: ./frontend
@@ -20,3 +21,4 @@ services:
 
 volumes:
   timelog_data:
+  whisper_models:

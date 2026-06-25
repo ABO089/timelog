@@ -10,7 +10,7 @@ from apscheduler.triggers.cron import CronTrigger
 from database import engine, SessionLocal
 from models import Base
 from routers import entries, projects, parse, auth_router
-from routers import push_router, improve
+from routers import push_router, improve, transcribe
 
 logger = logging.getLogger(__name__)
 
@@ -55,6 +55,7 @@ app.include_router(entries.router)
 app.include_router(parse.router)
 app.include_router(push_router.router)
 app.include_router(improve.router)
+app.include_router(transcribe.router)
 
 scheduler = AsyncIOScheduler(timezone=TZ)
 
