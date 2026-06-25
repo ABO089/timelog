@@ -90,13 +90,23 @@ function EntryRow({ entry, projects, onChange, onRemove }) {
           />
         </td>
         <td style={td}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            <input
-              type="text"
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 4 }}>
+            <textarea
               value={entry.description || ''}
               onChange={(e) => onChange({ ...entry, description: e.target.value })}
               placeholder="Beschreibung…"
-              style={{ fontSize: '0.85rem', padding: '4px 6px', flex: 1 }}
+              rows={Math.max(1, Math.ceil((entry.description || '').length / 50))}
+              style={{
+                fontSize: '0.85rem',
+                padding: '4px 6px',
+                flex: 1,
+                resize: 'vertical',
+                minHeight: 32,
+                lineHeight: 1.4,
+                fontFamily: 'inherit',
+                borderRadius: 4,
+                border: '1px solid var(--border)',
+              }}
             />
             <button
               onClick={handleImprove}
@@ -128,7 +138,7 @@ function EntryRow({ entry, projects, onChange, onRemove }) {
               ✨ Vorschlag für Faktura:
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontSize: '0.85rem', flex: 1, fontStyle: 'italic' }}>{suggestion}</span>
+              <p style={{ fontSize: '0.85rem', flex: 1, fontStyle: 'italic', margin: 0, wordBreak: 'break-word' }}>{suggestion}</p>
               <button
                 onClick={acceptSuggestion}
                 style={{
