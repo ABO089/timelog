@@ -22,7 +22,20 @@ class ParseRequest(BaseModel):
     entry_date: Optional[date] = None
 
 
-SAP_PRODUCTS = """SAP-Produktliste (Ariba, S/4HANA, BTP, Fiori, SuccessFactors, ABAP, Customizing, Transportauftrag, OData, SAP GUI, Basis, FI/CO, MM, SD, PP, WM, EWM, HCM, MDG, GRC, PI/PO, Integration Suite, Analytics Cloud / SAC, Datasphere, IBP, Concur, ECC / R/3)"""
+SAP_PRODUCTS = """SAP-Produktliste (Ariba, SAP Ariba Invoicing, S/4HANA, BTP, Fiori, SuccessFactors, ABAP, Customizing, Transportauftrag, OData, SAP GUI, Basis, FI/CO, MM, SD, PP, QM, WM, EWM, HCM, MDG, GRC, PI/PO, Integration Suite, Analytics Cloud / SAC, Datasphere, IBP, Concur, ECC / R/3, ATP (Available to Promise), Cloud ALM / CALM, DRC (Document & Reporting Compliance), ECM (Engineering Change Management), BaDI (Business Add-In), Strecke (Drop Shipment MM/SD), Bedarfsklassen (PP Planung))"""
+
+STYLE_EXAMPLES = """STILBEISPIELE — so sehen korrekte Beschreibungen aus (lerne Ton und Länge):
+- "SAP Ariba Invoicing Kickoff inkl. Vor- und Nachbereitung"
+- "Abstimmung und Bearbeitung Sprint 11 3-1981, 3-1988 inkl. Nachbereitung"
+- "SAP Ariba Invoicing, Finalisierung Replikation inkl. Funktionstest"
+- "Customizing SAP Ariba Invoicing"
+- "Integrativer Test inkl. Vorbereitung ATP, Abstimmung mit Projektteam und Nachbereitung"
+- "Datenmigration: MM-Objekte, Zugänge, Planung"
+- "Abstimmung SAP SD/MM-Integration, Strecke ATP Bestellbestätigung"
+- "Einrichtung SAP Ariba Invoicing, Terminplanung nach Rückmeldung"
+- "Vorbereitung Workshop J45 inkl. Projektteamsetup, Protokoll und Nachbereitung"
+- "Bearbeitung offene Aufgaben Sprint 13, MM-Kontenfindung"
+"""
 
 
 def build_prompt(text: str, projects: list[dict], today: str, job_context: str) -> str:
@@ -36,26 +49,29 @@ Datum heute: {today}
 
 {SAP_PRODUCTS}
 
+{STYLE_EXAMPLES}
+
 Bekannte Projekte (id, name, shortcode, aliases):
 {project_list}
 
 STRIKTE REGELN FÜR SPEECH-TO-TEXT & KONTEXT-OPTIMIERUNG (Höchste Priorität):
 1. TYPO- & HÖRFEHLER-KORREKTUR: Der Input stammt aus einer Sprache-zu-Text-Eingabe. Korrigiere typische "Verhörer" (z.B. "Abend" oder "Aber" → "ABAP", "Theorie" → "Fiori", "BDP" → "BTP", "Kastomeising" → "Customizing"). Nutze die SAP-Produktliste als Referenz.
 2. INTERNES SAP-FACHWISSEN NUTZEN: Wenn du auf einen unklaren Begriff stößt, der nach einem Tippfehler oder einem unbekannten SAP-Objekt/Modul/Framework klingt, nutze dein tiefes, internes SAP-Fachwissen, um den technologisch korrekten Begriff zu deduzieren und einzusetzen (Kontext-Abgleich).
-3. PROFESSIONALISIERUNG FÜR RECHNUNGEN: Formuliere die Beschreibungen so um, dass sie direkt auf einer Kundenrechnung ausgewiesen werden können. Nutze einen beratungstypischen, professionellen und prägnanten Stil. Beginne idealerweise mit aktiven Substantiven oder Verben (z.B. "Analyse von...", "Konzeptionierung...", "Implementierung...", "Fehlerbehebung im Bereich...").
-4. STRIKTE ANONYMISIERUNG: Erwähne NIEMALS konkrete Personennamen (z.B. "Herr Müller", "die Sabine") oder externe Firmennamen im finalen Beschreibungstext. Ersetze diese konsequent durch "Ansprechpartner des Kunden" oder "Projektteam". Der Text muss für den Endkunden freigegeben werden können.
+3. STIL — KURZ UND FACHSPRACHLICH: Schreibe knapp wie in einer SAP-Projektzeiterfassung. Orientiere dich an den Stilbeispielen oben. Kein Fülltext, keine langen Sätze. Füge "inkl. Vor- und Nachbereitung" hinzu wenn Meetings oder Workshops erwähnt werden. Max. ~100 Zeichen pro Beschreibung.
+4. STRIKTE ANONYMISIERUNG: Ersetze Personennamen (z.B. "Marco", "Tanja") durch "Projektteam" oder "Ansprechpartner des Kunden". Firmennamen NICHT in der Beschreibung nennen. Ticketnummern (3-XXXX), Sprint-Nummern, Workshop-Codes (J45, 5W3, 18J) und Scope-Kürzel bleiben erhalten.
 5. SAP-FOKUS: Achte penibel darauf, dass der SAP-spezifische Kontext (Modulnamen, technische Begriffe) im optimierten Text erhalten bleibt und korrekt angewendet wird.
+6. CODES & KÜRZEL BEWAHREN: Ticketnummern (3-XXXX), Sprint XX, Workshop-Codes (J45, 5W3, 18J), Projektphasen (PP04) und ähnliche Bezeichner exakt übernehmen — nicht kürzen, nicht weglassen.
 
 PROJEKT-MATCHING-REGELN:
-6. Extrahiere ALLE erwähnten Projektzeitbuchungen.
-7. Projekt-Matching — Priorität in dieser Reihenfolge:
+7. Extrahiere ALLE erwähnten Projektzeitbuchungen.
+8. Projekt-Matching — Priorität in dieser Reihenfolge:
    a) Exakter Shortcode-Treffer (case-insensitiv) → confidence: 1.0, KEIN Fuzzy-Matching, KEINE Verwechslung ähnlicher Kürzel (ZIM ≠ CIM, RK ≠ FK, etc.)
    b) Exakter Name-Treffer oder Alias-Treffer → confidence: 0.95
    c) Fuzzy-Matching nur wenn kein exakter Treffer → confidence je nach Ähnlichkeit
-8. Konfidenz >= 0.8 → project_id setzen. Darunter → project_id: null + new_project_suggestions Eintrag.
-9. Stundenangaben: "halbe Stunde" = 0.5, "anderthalb" = 1.5, "Viertel" = 0.25, "dreiviertel" = 0.75.
-10. Kein Datum im Text → heutiges Datum verwenden: {today}.
-11. NIEMALS Projektnamen erfinden die nicht in der Liste stehen.
+9. Konfidenz >= 0.8 → project_id setzen. Darunter → project_id: null + new_project_suggestions Eintrag.
+10. Stundenangaben: "halbe Stunde" = 0.5, "anderthalb" = 1.5, "Viertel" = 0.25, "dreiviertel" = 0.75.
+11. Kein Datum im Text → heutiges Datum verwenden: {today}.
+12. NIEMALS Projektnamen erfinden die nicht in der Liste stehen.
 
 RÜCKGABEFORMAT (Striktes JSON):
 Antworte AUSSCHLIESSLICH im folgenden JSON-Format ohne zusätzlichen Text oder Markdown:
